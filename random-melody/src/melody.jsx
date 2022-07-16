@@ -83,7 +83,7 @@ function RandomMelody({ setPage }) {
       octave = getOctave(notes[i - 1], note, octave);
       instrument?.play(
         synthNotes[note] + octave.toString(),
-        ac.currentTime + i,
+        ac.currentTime + i * 0.8,
         {
           duration: 1,
         }
@@ -96,7 +96,7 @@ function RandomMelody({ setPage }) {
     const currIndex = allNotes.indexOf(curr);
     const octave = prevOctave ?? 4;
     const dist = currIndex - prevIndex;
-    const shift = dist > 7 ? -1 : dist <= -7 ? 1 : 0;
+    const shift = dist >= 7 ? -1 : dist <= -7 ? 1 : 0;
     return octave + shift;
   };
 
@@ -131,6 +131,7 @@ function RandomMelody({ setPage }) {
   };
 
   const generate = () => {
+    instrument?.stop();
     setNotes(getRandomNotes(numberOfNotes));
   };
 
