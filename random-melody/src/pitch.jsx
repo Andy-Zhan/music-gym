@@ -1,3 +1,4 @@
+import { SettingsOverscanOutlined } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
 import BackIcon from "@mui/icons-material/KeyboardBackspace";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -15,6 +16,7 @@ import {
   Switch,
   Typography,
   useTheme,
+  Snackbar,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { keyframes } from "@mui/system";
@@ -55,13 +57,11 @@ const ButtonActionButton = styled(Button)(() => ({
   margin: 10,
 }));
 
-const DivKeys = styled("div")(() => ({
-  padding: 10,
-}));
-
-const StartButton = styled(Button)(({ theme }) => ({
-  background: `linear-gradient(45deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-  color: "white",
+const StartButton = styled(Button)((props) => ({
+  background: props.disabled
+    ? undefined
+    : `linear-gradient(45deg, ${props.theme.palette.primary.main} 0%, ${props.theme.palette.secondary.main} 100%)`,
+  color: props.disabled ? undefined : "white",
   margin: 10,
 }));
 
@@ -87,7 +87,9 @@ const encouragementAnim = keyframes`
     },
 `;
 
-const EncouragementText = styled(Typography)((props) => ({
+const EncouragementText = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== "encouragementAnimation",
+})((props) => ({
   animation: props.encouragementAnimation
     ? `${encouragementAnim} 1000ms ${props.theme.transitions.easing.easeInOut}`
     : undefined,
@@ -120,6 +122,9 @@ const Pitch = ({ setPage }) => {
     low: 2,
     high: 5,
   });
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [showedSnackbar, setShowedSnackbar] = useState(false);
+  const [isInvalid, setInvalid] = useState(false);
 
   const [settings, setSettings] = useState({
     customNotes: false,
@@ -130,7 +135,6 @@ const Pitch = ({ setPage }) => {
 
   const [customNotes, setCustomNotes] = useState(
     new Array(pitches.length).fill(true)
-    //[...pitches].reduce((a, v) => ({ ...a, [v]: true }), {})
   );
 
   const [instrument, setInstrument] = useState(null);
@@ -140,6 +144,18 @@ const Pitch = ({ setPage }) => {
       setInstrument(piano)
     );
   }, [ac]);
+
+  useEffect(() => {
+    const isValid = () =>
+      noteCount <=
+      (settings.customNotes
+        ? customNotes.filter(Boolean).length
+        : pitches.length) *
+        (settings.allowSameNote ? range.high - range.low : 1);
+
+    setInvalid(!isValid());
+    setStarted(false);
+  }, [noteCount, settings, customNotes, range]);
 
   const clearSelect = () => {
     setPitchSelect(new Array(pitches.length).fill(false));
@@ -184,7 +200,7 @@ const Pitch = ({ setPage }) => {
       if (settings.allowSameNote) {
         possibleNotes.splice(rand, 1);
       } else {
-        possibleNotes = possibleNotes.filter((i) => i !== noteIndex);
+        possibleNotes = possibleNotes.filter((i) => i[0] !== noteIndex);
       }
     }
     setPitchCorrect(keys);
@@ -218,6 +234,16 @@ const Pitch = ({ setPage }) => {
   };
 
   const check = () => {
+    const customNotesCount = customNotes.filter(Boolean).length;
+    if (
+      !showedSnackbar &&
+      settings.customNotes &&
+      (customNotesCount === 1 ||
+        (!settings.allowSameNote && customNotesCount === noteCount))
+    ) {
+      setSnackbarOpen(true);
+      setShowedSnackbar(true);
+    }
     if (pitchSelect.every((value, index) => value === pitchCorrect[index])) {
       setIncorrect(false);
       setCorrectCount((c) => c + 1);
@@ -283,24 +309,57 @@ const Pitch = ({ setPage }) => {
               <IconButton
                 size="small"
                 onClick={() => setNoteCount(Math.max(1, noteCount - 1))}
+                disabled={noteCount === 1}
               >
                 <RemoveIconIncrementButton />
               </IconButton>
               {noteCount}
               <IconButton
                 size="small"
-                onClick={() => setNoteCount(Math.min(12, noteCount + 1))}
+                disabled={noteCount === 11}
+                onClick={() => setNoteCount(Math.min(11, noteCount + 1))}
               >
                 <AddIconIncrementButton />
               </IconButton>
             </Typography>
           </div>
           <div style={{ paddingTop: 20 }}>
-            <DivKeys>
+            <div style={{ padding: 10, position: "relative" }}>
+              {isInvalid && (
+                <div
+                  style={{
+                    width: "calc(100% - 20px)",
+                    height: "calc(100% - 20px)",
+                    position: "absolute",
+                    backgroundColor: "rgba(0,0,0,0.6)",
+                    borderRadius: 4,
+                    boxSizing: "border-box",
+                    zIndex: 2,
+                    color: "white",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography
+                    variant="body1"
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "bold",
+                      textAlign: "center",
+                    }}
+                  >
+                    Psst! No chord that matches your options can be created.
+                    Please adjust your options.
+                  </Typography>
+                </div>
+              )}
               <ButtonGroup>
                 {pitches.map((p, i) => {
                   const disabled =
-                    (settings.customNotes && !customNotes[i]) || !hasStarted;
+                    (settings.customNotes && !customNotes[i]) ||
+                    !hasStarted ||
+                    isShowAnswer;
                   return (
                     <Button
                       key={i}
@@ -328,7 +387,7 @@ const Pitch = ({ setPage }) => {
                   );
                 })}
               </ButtonGroup>
-            </DivKeys>
+            </div>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <ButtonActionButton
                 variant="outlined"
@@ -342,9 +401,11 @@ const Pitch = ({ setPage }) => {
                 <StartButton
                   variant="contained"
                   onClick={() => {
+                    setShowAnswer(false);
                     setStarted(true);
                     newChord();
                   }}
+                  disabled={isInvalid}
                 >
                   Start!
                 </StartButton>
@@ -411,7 +472,7 @@ const Pitch = ({ setPage }) => {
                     }}
                   >
                     The {lastChord.length > 1 ? "full chord" : "note"} was{" "}
-                    {lastChord.join("-")}
+                    {lastChord.join(" - ")}
                   </Typography>
                 ) : (
                   incorrect && (
@@ -505,10 +566,13 @@ const Pitch = ({ setPage }) => {
                         value={range.low}
                         label="Low"
                         onChange={(e) => {
-                          setRange((r) => ({ ...r, low: e.target.value }));
+                          setRange((r) => ({
+                            low: e.target.value,
+                            high: Math.max(e.target.value + 1, r.high),
+                          }));
                         }}
                       >
-                        {getRange(0, 8).map((_, k) => (
+                        {getRange(1, 8).map((k) => (
                           <MenuItem value={k} key={k}>
                             {"C" + k}
                           </MenuItem>
@@ -527,10 +591,13 @@ const Pitch = ({ setPage }) => {
                         value={range.high}
                         label="High"
                         onChange={(e) => {
-                          setRange((r) => ({ ...r, high: e.target.value }));
+                          setRange((r) => ({
+                            low: Math.min(e.target.value - 1, r.low),
+                            high: e.target.value,
+                          }));
                         }}
                       >
-                        {getRange(1, 9).map((_, k) => (
+                        {getRange(2, 9).map((k) => (
                           <MenuItem value={k} key={k}>
                             {"C" + k}
                           </MenuItem>
@@ -588,6 +655,16 @@ const Pitch = ({ setPage }) => {
           </div>
         </div>
       </Fade>
+      <Snackbar
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        open={snackbarOpen}
+        autoHideDuration={1500}
+        onClose={(_, reason) => {
+          if (reason === "clickaway") return;
+          setSnackbarOpen(false);
+        }}
+        message="(Really challenging yourself there, aren't ya? 🙃)"
+      />
     </>
   );
 };
