@@ -76,28 +76,32 @@ function RandomMelody({ setPage }) {
     );
   }, [ac]);
 
-  const play = () => {
-    let octave = null;
-
-    notes.forEach((note, i) => {
-      octave = getOctave(notes[i - 1], note, octave);
-      instrument?.play(
-        synthNotes[note] + octave.toString(),
-        ac.currentTime + i * 0.8,
-        {
-          duration: 1,
-        }
-      );
+  const getNotesToPlay = (notes) => {
+    let octave = 4;
+    return notes.map((note, i) => {
+      if (i > 0) octave = getOctave(notes[i - 1], note, octave);
+      return synthNotes[note] + octave.toString();
     });
+  };
+
+  const play = () => {
+    instrument?.stop();
+    getNotesToPlay(notes).forEach((note, i) => {
+      instrument?.play(note, ac.currentTime + i * 0.8, { duration: 1 });
+    });
+  };
+
+  const playNote = (noteIndex) => {
+    instrument?.stop();
+    instrument?.play(getNotesToPlay(notes)[noteIndex]);
   };
 
   const getOctave = (prev, curr, prevOctave) => {
     const prevIndex = allNotes.indexOf(prev);
     const currIndex = allNotes.indexOf(curr);
-    const octave = prevOctave ?? 4;
     const dist = currIndex - prevIndex;
     const shift = dist >= 7 ? -1 : dist <= -7 ? 1 : 0;
-    return octave + shift;
+    return prevOctave + shift;
   };
 
   const isNoteAllowed = (note, selectedNotes) => {
@@ -249,7 +253,11 @@ function RandomMelody({ setPage }) {
                 {notes.length <= 10 ? (
                   <ButtonGroup style={{ marginTop: 20 }}>
                     {notes.map((i, k) => (
-                      <Button key={k} style={{ width: 60 }}>
+                      <Button
+                        key={k}
+                        style={{ width: 60 }}
+                        onClick={() => playNote(k)}
+                      >
                         {i}
                       </Button>
                     ))}
@@ -258,14 +266,22 @@ function RandomMelody({ setPage }) {
                   <>
                     <ButtonGroup style={{ marginTop: 20 }}>
                       {notes.slice(0, notes.length / 2).map((i, k) => (
-                        <Button style={{ width: 60 }} key={k}>
+                        <Button
+                          style={{ width: 60 }}
+                          key={k}
+                          onClick={() => playNote(k)}
+                        >
                           {i}
                         </Button>
                       ))}
                     </ButtonGroup>
                     <ButtonGroup style={{ marginTop: 2 }}>
                       {notes.slice(notes.length / 2).map((i, k) => (
-                        <Button style={{ width: 60 }} key={k}>
+                        <Button
+                          style={{ width: 60 }}
+                          key={k}
+                          onClick={() => playNote(k + notes.length / 2)}
+                        >
                           {i}
                         </Button>
                       ))}

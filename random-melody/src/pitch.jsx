@@ -1,4 +1,3 @@
-import { SettingsOverscanOutlined } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
 import BackIcon from "@mui/icons-material/KeyboardBackspace";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -13,10 +12,10 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  Snackbar,
   Switch,
   Typography,
   useTheme,
-  Snackbar,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { keyframes } from "@mui/system";
@@ -125,6 +124,7 @@ const Pitch = ({ setPage }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [showedSnackbar, setShowedSnackbar] = useState(false);
   const [isInvalid, setInvalid] = useState(false);
+  const [selectHist, setSelectHist] = useState([]);
 
   const [settings, setSettings] = useState({
     customNotes: false,
@@ -154,6 +154,9 @@ const Pitch = ({ setPage }) => {
         (settings.allowSameNote ? range.high - range.low : 1);
 
     setInvalid(!isValid());
+    setLastChord([]);
+    setSelectHist([]);
+    clearSelect();
     setStarted(false);
   }, [noteCount, settings, customNotes, range]);
 
@@ -168,7 +171,21 @@ const Pitch = ({ setPage }) => {
   };
 
   const togglePitch = (pos) => {
-    setPitchSelect((p) => p.map((v, i) => (i === pos ? !v : v)));
+    if (pitchSelect[pos]) {
+      setSelectHist((s) => {
+        let newHist = s.slice();
+        newHist.splice(s.indexOf(pos), 1);
+        return newHist;
+      });
+      setPitchSelect((p) => p.map((v, i) => (i === pos ? false : v)));
+    } else {
+      const willRemove = pitchSelect.filter(Boolean).length === noteCount;
+      const removePos = willRemove && selectHist.length ? selectHist[0] : null;
+      setSelectHist((s) => s.slice(willRemove ? 1 : 0).concat([pos]));
+      setPitchSelect((p) =>
+        p.map((v, i) => (i === pos ? true : i === removePos ? false : v))
+      );
+    }
   };
 
   const getRange = (lo, hi) =>
@@ -271,6 +288,7 @@ const Pitch = ({ setPage }) => {
 
   const nextAfterShowAnswer = () => {
     clearSelect();
+    setSelectHist([]);
 
     setLastChord([]);
     newChord();
@@ -379,7 +397,7 @@ const Pitch = ({ setPage }) => {
                           ? "white"
                           : "black",
                       }}
-                      variant={pitchSelect[i] ? "contained" : "text"}
+                      variant="text"
                       onClick={() => togglePitch(i)}
                     >
                       {p}
@@ -438,7 +456,7 @@ const Pitch = ({ setPage }) => {
               <ButtonActionButton
                 variant="text"
                 onClick={showAnswer}
-                disabled={isShowAnswer}
+                disabled={isShowAnswer || !hasStarted}
               >
                 Show Answer
               </ButtonActionButton>
