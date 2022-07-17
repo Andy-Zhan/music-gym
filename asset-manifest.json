@@ -1,0 +1,14 @@
+{
+  "files": {
+    "main.css": "/music-gym/static/css/main.4152c3d3.css",
+    "main.js": "/music-gym/static/js/main.dbb69f78.js",
+    "static/media/musicplane.png": "/music-gym/static/media/musicplane.79d7d340bcbedc77bc75.png",
+    "index.html": "/music-gym/index.html",
+    "main.4152c3d3.css.map": "/music-gym/static/css/main.4152c3d3.css.map",
+    "main.dbb69f78.js.map": "/music-gym/static/js/main.dbb69f78.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.4152c3d3.css",
+    "static/js/main.dbb69f78.js"
+  ]
+}
