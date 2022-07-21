@@ -1,3 +1,3 @@
-##The Music Gym
+## The Music Gym
 
 Built with React
