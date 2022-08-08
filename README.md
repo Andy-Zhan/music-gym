@@ -1,3 +1,5 @@
 ## The Music Gym
 
-Built with React
+A website with tools for training musicianship skills.
+
+Built with React ⚛
