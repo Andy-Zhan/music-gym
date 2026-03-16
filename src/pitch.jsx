@@ -1,9 +1,13 @@
 import AddIcon from "@mui/icons-material/Add";
 import BackIcon from "@mui/icons-material/KeyboardBackspace";
 import RemoveIcon from "@mui/icons-material/Remove";
+import SettingsIcon from "@mui/icons-material/Settings";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import {
   Button,
   ButtonGroup,
+  Collapse,
   Fade,
   FormControl,
   FormControlLabel,
@@ -125,6 +129,7 @@ const Pitch = ({ setPage }) => {
   const [showedSnackbar, setShowedSnackbar] = useState(false);
   const [isInvalid, setInvalid] = useState(false);
   const [selectHist, setSelectHist] = useState([]);
+  const [showOptions, setShowOptions] = useState(false);
 
   const [settings, setSettings] = useState({
     customNotes: false,
@@ -151,7 +156,7 @@ const Pitch = ({ setPage }) => {
       (settings.customNotes
         ? customNotes.filter(Boolean).length
         : pitches.length) *
-        (settings.allowSameNote ? range.high - range.low : 1);
+      (settings.allowSameNote ? range.high - range.low : 1);
 
     setInvalid(!isValid());
     setLastChord([]);
@@ -240,7 +245,7 @@ const Pitch = ({ setPage }) => {
           (a, b) =>
             parseInt(a.slice(-1)) - parseInt(b.slice(-1)) ||
             synthPitches.indexOf(a.slice(0, -1)) -
-              synthPitches.indexOf(b.slice(0, -1))
+            synthPitches.indexOf(b.slice(0, -1))
         )
         .map((note) =>
           pitches[synthPitches.indexOf(note.slice(0, -1))].concat(
@@ -305,9 +310,11 @@ const Pitch = ({ setPage }) => {
 
   return (
     <>
-      <IconButton onClick={() => setPage("home")}>
-        <BackIcon />
-      </IconButton>
+      <div style={{ position: 'sticky', top: 0, background: 'white', zIndex: 10, width: '100%' }}>
+        <IconButton onClick={() => setPage("home")}>
+          <BackIcon />
+        </IconButton>
+      </div>
       <Fade in={true} timeout={{ enter: 500, exit: 500 }}>
         <div style={{ padding: "0px 0px 20px 0px" }}>
           <div>
@@ -372,39 +379,41 @@ const Pitch = ({ setPage }) => {
                   </Typography>
                 </div>
               )}
-              <ButtonGroup>
-                {pitches.map((p, i) => {
-                  const disabled =
-                    (settings.customNotes && !customNotes[i]) ||
-                    !hasStarted ||
-                    isShowAnswer;
-                  return (
-                    <Button
-                      key={i}
-                      disabled={disabled}
-                      style={{
-                        width: 80,
-                        backgroundColor: disabled
-                          ? undefined
-                          : pitchSelect[i]
-                          ? "purple"
-                          : blackKeys.includes(i)
-                          ? "black"
-                          : "white",
-                        color: disabled
-                          ? undefined
-                          : pitchSelect[i] || blackKeys.includes(i)
-                          ? "white"
-                          : "black",
-                      }}
-                      variant="text"
-                      onClick={() => togglePitch(i)}
-                    >
-                      {p}
-                    </Button>
-                  );
-                })}
-              </ButtonGroup>
+              <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+                <ButtonGroup>
+                  {pitches.map((p, i) => {
+                    const disabled =
+                      (settings.customNotes && !customNotes[i]) ||
+                      !hasStarted ||
+                      isShowAnswer;
+                    return (
+                      <Button
+                        key={i}
+                        disabled={disabled}
+                        style={{
+                          width: 80,
+                          backgroundColor: disabled
+                            ? undefined
+                            : pitchSelect[i]
+                              ? "purple"
+                              : blackKeys.includes(i)
+                                ? "black"
+                                : "white",
+                          color: disabled
+                            ? undefined
+                            : pitchSelect[i] || blackKeys.includes(i)
+                              ? "white"
+                              : "black",
+                        }}
+                        variant="text"
+                        onClick={() => togglePitch(i)}
+                      >
+                        {p}
+                      </Button>
+                    );
+                  })}
+                </ButtonGroup>
+              </div>
             </div>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <ButtonActionButton
@@ -484,8 +493,8 @@ const Pitch = ({ setPage }) => {
                       color: !incorrect
                         ? "green"
                         : isShowAnswer
-                        ? "grey"
-                        : "red",
+                          ? "grey"
+                          : "red",
                       fontWeight: "bold",
                     }}
                   >
@@ -519,157 +528,180 @@ const Pitch = ({ setPage }) => {
               >
                 Incorrect: {incorrectCount}
               </Typography>
+
+              <div style={{
+                marginTop: 30,
+                padding: '20px',
+                backgroundColor: 'rgba(0,0,0,0.03)',
+                borderRadius: '8px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center'
+              }}>
+                <Typography variant="caption" color="textSecondary" style={{ marginBottom: 10 }}>
+                  Need a reference?
+                </Typography>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+                  <FormControl size="small">
+                    <Select
+                      style={{ width: 100 }}
+                      value={refPitch}
+                      onChange={(e) => setRefPitch(e.target.value)}
+                    >
+                      {pitches.map((i, k) => (
+                        <MenuItem value={k} key={k}>
+                          {i}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      instrument?.stop();
+                      instrument?.play(synthPitches[refPitch] + "4");
+                    }}
+                  >
+                    Play Reference
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
-          <div style={{ display: "flex" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-start",
-                width: "90%",
-                marginTop: 20,
-                border: "1px solid " + theme.palette.primary.main + "40",
-                borderRadius: 4,
-                padding: 40,
-              }}
-            >
-              <div>
-                <FormControl>
-                  <FormGroup>
-                    <div style={{ display: "flex", marginBottom: 20 }}>
-                      <InputLabel>Reference Pitch</InputLabel>
-                      <Select
-                        style={{ width: 120 }}
-                        value={refPitch}
-                        label="Reference Pitch"
-                        onChange={(e) => {
-                          setRefPitch(e.target.value);
-                        }}
-                      >
-                        {pitches.map((i, k) => (
-                          <MenuItem value={k} key={k}>
-                            {i}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      <Button
-                        onClick={() => {
-                          instrument?.stop();
-                          instrument?.play(synthPitches[refPitch] + "4");
-                        }}
-                        style={{ marginLeft: 20 }}
-                      >
-                        Play Reference Pitch
-                      </Button>
-                    </div>
-                  </FormGroup>
-                </FormControl>
 
+          {/* COLLAPSIBLE OPTIONS SECTION */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 40 }}>
+            <Button
+              startIcon={<SettingsIcon />}
+              endIcon={showOptions ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              onClick={() => setShowOptions(!showOptions)}
+              style={{ marginBottom: 10 }}
+            >
+              {showOptions ? "Hide Options" : "Show Options"}
+            </Button>
+
+            <Collapse in={showOptions} style={{ width: '100%' }}>
+              <div style={{ display: "flex", justifyContent: "center" }}>
                 <div
                   style={{
                     display: "flex",
-                    marginBottom: 20,
-                    alignItems: "center",
+                    justifyContent: "flex-start",
+                    width: "90%",
+                    border: "1px solid " + theme.palette.primary.main + "40",
+                    borderRadius: 4,
+                    padding: 40,
+                    backgroundColor: 'white'
                   }}
                 >
-                  <Typography variant="body1" style={{ paddingRight: 20 }}>
-                    Range:{" "}
-                  </Typography>
+                  <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        marginBottom: 20,
+                        alignItems: "center",
+                      }}
+                    >
+                      <Typography variant="body1" style={{ paddingRight: 20 }}>
+                        Range:{" "}
+                      </Typography>
 
-                  <FormControl>
-                    <FormGroup>
-                      <InputLabel>Low</InputLabel>
-                      <Select
-                        style={{ width: 80 }}
-                        value={range.low}
-                        label="Low"
-                        onChange={(e) => {
-                          setRange((r) => ({
-                            low: e.target.value,
-                            high: Math.max(e.target.value + 1, r.high),
-                          }));
-                        }}
-                      >
-                        {getRange(1, 8).map((k) => (
-                          <MenuItem value={k} key={k}>
-                            {"C" + k}
-                          </MenuItem>
+                      <FormControl>
+                        <FormGroup>
+                          <InputLabel>Low</InputLabel>
+                          <Select
+                            style={{ width: 80 }}
+                            value={range.low}
+                            label="Low"
+                            onChange={(e) => {
+                              setRange((r) => ({
+                                low: e.target.value,
+                                high: Math.max(e.target.value + 1, r.high),
+                              }));
+                            }}
+                          >
+                            {getRange(1, 8).map((k) => (
+                              <MenuItem value={k} key={k}>
+                                {"C" + k}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormGroup>
+                      </FormControl>
+                      <Typography variant="body1" style={{ padding: "0px 20px" }}>
+                        to
+                      </Typography>
+                      <FormControl>
+                        <FormGroup>
+                          <InputLabel>High</InputLabel>
+                          <Select
+                            style={{ width: 80 }}
+                            value={range.high}
+                            label="High"
+                            onChange={(e) => {
+                              setRange((r) => ({
+                                low: Math.min(e.target.value - 1, r.low),
+                                high: e.target.value,
+                              }));
+                            }}
+                          >
+                            {getRange(2, 9).map((k) => (
+                              <MenuItem value={k} key={k}>
+                                {"C" + k}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormGroup>
+                      </FormControl>
+                    </div>
+                    <FormControl>
+                      <FormGroup>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={settings.allowSameNote}
+                              onChange={handleChangeSettings}
+                              name="allowSameNote"
+                            />
+                          }
+                          label="Allow the same note in different octaves (e.g. C2 and C4)"
+                        />
+                      </FormGroup>
+
+                      <FormGroup>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={settings.customNotes}
+                              onChange={handleChangeSettings}
+                              name="customNotes"
+                            />
+                          }
+                          label="Only use selected notes"
+                        />
+                      </FormGroup>
+                      <ButtonGroup style={{ margin: "10px 0" }}>
+                        {pitches.map((v, k) => (
+                          <Button
+                            onClick={() => {
+                              setCustomNotes((n) =>
+                                n.map((o, i) => (i === k ? !o : o))
+                              );
+                            }}
+                            style={{ width: 64 }}
+                            key={k}
+                            variant={customNotes[k] ? "contained" : "outlined"}
+                            disabled={!settings.customNotes}
+                          >
+                            {v}
+                          </Button>
                         ))}
-                      </Select>
-                    </FormGroup>
-                  </FormControl>
-                  <Typography variant="body1" style={{ padding: "0px 20px" }}>
-                    to
-                  </Typography>
-                  <FormControl>
-                    <FormGroup>
-                      <InputLabel>High</InputLabel>
-                      <Select
-                        style={{ width: 80 }}
-                        value={range.high}
-                        label="High"
-                        onChange={(e) => {
-                          setRange((r) => ({
-                            low: Math.min(e.target.value - 1, r.low),
-                            high: e.target.value,
-                          }));
-                        }}
-                      >
-                        {getRange(2, 9).map((k) => (
-                          <MenuItem value={k} key={k}>
-                            {"C" + k}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormGroup>
-                  </FormControl>
+                      </ButtonGroup>
+                    </FormControl>
+                  </div>
                 </div>
-                <FormControl>
-                  <FormGroup>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={settings.allowSameNote}
-                          onChange={handleChangeSettings}
-                          name="allowSameNote"
-                        />
-                      }
-                      label="Allow the same note in different octaves (e.g. C2 and C4)"
-                    />
-                  </FormGroup>
-
-                  <FormGroup>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={settings.customNotes}
-                          onChange={handleChangeSettings}
-                          name="customNotes"
-                        />
-                      }
-                      label="Only use selected notes"
-                    />
-                  </FormGroup>
-                  <ButtonGroup style={{ margin: "10px 0" }}>
-                    {pitches.map((v, k) => (
-                      <Button
-                        onClick={() => {
-                          setCustomNotes((n) =>
-                            n.map((o, i) => (i === k ? !o : o))
-                          );
-                        }}
-                        style={{ width: 64 }}
-                        key={k}
-                        variant={customNotes[k] ? "contained" : "outlined"}
-                        disabled={!settings.customNotes}
-                      >
-                        {v}
-                      </Button>
-                    ))}
-                  </ButtonGroup>
-                </FormControl>
               </div>
-            </div>
+            </Collapse>
           </div>
         </div>
       </Fade>

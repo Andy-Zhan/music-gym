@@ -1,7 +1,7 @@
 import { Paper, Typography } from "@mui/material";
 import { grey, pink, purple } from "@mui/material/colors";
 import { createTheme, styled, ThemeProvider } from "@mui/material/styles";
-import React, { createContext, useRef, useState } from "react";
+import React, { createContext, useState, useRef } from "react";
 import Home from "./home";
 import RandomMelody from "./melody";
 import Pitch from "./pitch";
@@ -9,15 +9,9 @@ import { useResizeObserver } from "./util/resize";
 
 const theme = createTheme({
   palette: {
-    primary: {
-      main: purple[500],
-    },
-    secondary: {
-      main: pink[500],
-    },
-    info: {
-      main: grey[500],
-    },
+    primary: { main: purple[500] },
+    secondary: { main: pink[500] },
+    info: { main: grey[500] },
   },
   typography: {
     fontFamily: "Montserrat",
@@ -39,69 +33,77 @@ const DivRoot = styled("div")(() => ({
 const AnchorLink = styled("a")(() => ({
   textDecoration: "none",
   color: "lightpink",
-
-  "&:hover": {
-    color: "aquamarine",
-  },
+  "&:hover": { color: "aquamarine" },
 }));
 
 export const soundContext = createContext(new AudioContext());
 
-const getPage = (page, setPage) =>
-  ({
-    home: <Home setPage={setPage} />,
-    pitch: <Pitch setPage={setPage} />,
-    randomMelody: <RandomMelody setPage={setPage} />,
-  }[page]);
-
 function App() {
-  const content = useRef(null);
-  const rect = useResizeObserver(content);
-
   const [page, setPage] = useState("home");
+  const contentRef = useRef(null);
+  const rect = useResizeObserver(contentRef);
+
+  const isHome = page === "home";
+
+  const getPageContent = () => {
+    switch (page) {
+      case "home": return <Home setPage={setPage} />;
+      case "pitch": return <Pitch setPage={setPage} />;
+      case "randomMelody": return <RandomMelody setPage={setPage} />;
+      default: return <Home setPage={setPage} />;
+    }
+  };
 
   return (
     <ThemeProvider theme={theme}>
       <DivRoot>
         <Paper
-          elevation={5}
-          style={{
-            padding: "20px",
-            borderRadius: 20,
-            height: `${rect.height}px`,
-            width: `${rect.width}px`,
-            overflow: "hidden",
-            transition: "0.5s",
-          }}
+         elevation={isHome ? 5 : 0}
+         style={{
+           padding: isHome ? "20px" : "0px",
+           borderRadius: isHome ? 20 : 0,
+           height: isHome ? `${rect.height}px` : "100vh",
+           width: isHome ? `${rect.width}px` : "100vw",
+           // Changed from 'hidden' to 'auto' to allow scrolling
+           overflowX: "hidden", 
+           overflowY: "auto", 
+           transition: "all 0.5s ease-in-out",
+           position: "relative",
+           zIndex: 1,
+           scrollBehavior: "smooth" 
+         }}
         >
           <div
-            ref={content}
+            ref={contentRef}
             style={{
-              width: "fit-content",
-              height: "fit-content",
+              width: isHome ? "fit-content" : "100%",
+              height: isHome ? "fit-content" : "100%",
+              padding: isHome ? 0 : "20px",
+              boxSizing: "border-box",
             }}
           >
-            {getPage(page, setPage)}
+            {getPageContent()}
           </div>
         </Paper>
-        <div
-          style={{
-            position: "absolute",
-            bottom: 20,
-            right: 20,
-            background: "rgba(0,0,0,0.5)",
-            color: "white",
-            padding: 10,
-            borderRadius: 15,
-          }}
-        >
-          <Typography variant="body2">
-            Made with ❤️ by{" "}
-            <AnchorLink href="https://patreon.com/andyzhan">
-              Andy Zhan
-            </AnchorLink>
-          </Typography>
-        </div>
+
+        {isHome && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 20,
+              right: 20,
+              background: "rgba(0,0,0,0.5)",
+              color: "white",
+              padding: 10,
+              borderRadius: 15,
+            }}
+          >
+            <Typography variant="body2">
+              Made with ❤️ by{" "}
+              <AnchorLink href="https://linktr.ee/andyzhanpiano">Andy Zhan</AnchorLink>
+            </Typography>
+          </div>
+        )}
       </DivRoot>
     </ThemeProvider>
   );

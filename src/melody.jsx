@@ -1,35 +1,37 @@
 import {
   Button,
+  Collapse,
   Fade,
   FormControl,
   FormControlLabel,
   FormGroup,
   FormLabel,
   IconButton,
-  ButtonGroup,
   Switch,
   Typography,
+  ButtonGroup,
 } from "@mui/material";
 import React, { useState, useContext, useEffect } from "react";
 import Soundfont from "soundfont-player";
 import BackIcon from "@mui/icons-material/KeyboardBackspace";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { styled, useTheme } from "@mui/material/styles";
 import { soundContext } from "./app";
 
 const allNotes = [
   "C",
-  "C♯/D♭",
+  "C♯",
   "D",
-  "D♯/E♭",
+  "E♭",
   "E",
   "F",
-  "F♯/G♭",
+  "F♯",
   "G",
-  "G♯/A♭",
+  "A♭",
   "A",
-  "A♯/B♭",
+  "B♭",
   "B",
 ];
 
@@ -47,13 +49,19 @@ function RandomMelody({ setPage }) {
     [...allNotes].reduce((a, v) => ({ ...a, [v]: true }), {})
   );
   const [notes, setNotes] = useState([]);
-  const [numberOfNotes, setNumberOfNotes] = useState(5);
+  const [showOptions, setShowOptions] = useState(false);
+  const [numberOfNotes, setNumberOfNotes] = useState(4);
   const [settings, setSettings] = useState({
     allowRepeated: true,
     allowDuplicate: true,
     customNotes: false,
   });
   const [instrument, setInstrument] = useState(null);
+
+
+  const [slotStrips, setSlotStrips] = useState([]);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const ac = useContext(soundContext);
 
@@ -134,9 +142,59 @@ function RandomMelody({ setPage }) {
     return selectedNotes;
   };
 
-  const generate = () => {
+  const clear = () => {
     instrument?.stop();
-    setNotes(getRandomNotes(numberOfNotes));
+    setNotes([]);
+    setSlotStrips([]);
+    setIsSpinning(false);
+  };
+
+  const generate = () => {
+    if (isGenerating) return;
+
+    instrument?.stop();
+    setIsGenerating(true);
+    setIsSpinning(false);
+    setNotes([]);
+
+    const currentNotesList = settings.customNotes
+      ? Object.keys(customNotes).filter((i) => customNotes[i])
+      : allNotes;
+
+    const finalGeneratedNotes = getRandomNotes(numberOfNotes);
+
+
+
+    const newStrips = finalGeneratedNotes.map((finalNote, index) => {
+      const spinLength = 15 + index * 10;
+      const strip = Array(spinLength)
+        .fill()
+        .map(
+          () =>
+            currentNotesList[
+            Math.floor(Math.random() * currentNotesList.length)
+            ]
+        );
+      strip.push(finalNote);
+      return strip;
+    });
+
+    setSlotStrips(newStrips);
+
+
+
+    setTimeout(() => {
+      setIsSpinning(true);
+
+
+      const maxDurationMs = 2000 + (numberOfNotes - 1) * 500;
+
+
+      setTimeout(() => {
+        setNotes(finalGeneratedNotes);
+        setIsGenerating(false);
+      }, maxDurationMs);
+    }, 50);
   };
 
   const handleChangeSettings = (e) => {
@@ -158,9 +216,11 @@ function RandomMelody({ setPage }) {
 
   return (
     <div>
-      <IconButton onClick={() => setPage("home")}>
-        <BackIcon />
-      </IconButton>
+      <div style={{ position: 'sticky', top: 0, background: 'white', zIndex: 10, width: '100%' }}>
+        <IconButton onClick={() => setPage("home")}>
+          <BackIcon />
+        </IconButton>
+      </div>
       <Fade in={true} timeout={{ enter: 500, exit: 500 }}>
         <div
           style={{
@@ -170,7 +230,7 @@ function RandomMelody({ setPage }) {
             flexDirection: "column",
           }}
         >
-          <div>
+          <div style={{ paddingTop: 20 }}>
             <Typography
               variant="h4"
               style={{
@@ -193,7 +253,7 @@ function RandomMelody({ setPage }) {
                 Number of notes to generate:
                 <IconButton
                   size="small"
-                  disabled={numberOfNotes === 1}
+                  disabled={numberOfNotes === 1 || isGenerating}
                   onClick={() => setNumberOfNotes((n) => Math.max(1, n - 1))}
                   style={{ margin: "0px 10px" }}
                 >
@@ -204,12 +264,13 @@ function RandomMelody({ setPage }) {
                   size="small"
                   style={{ margin: "0px 10px" }}
                   disabled={
+                    isGenerating ||
                     numberOfNotes ===
                     (settings.allowDuplicate
                       ? 20
                       : settings.customNotes
-                      ? Object.values(customNotes).filter(Boolean).length
-                      : allNotes.length)
+                        ? Object.values(customNotes).filter(Boolean).length
+                        : allNotes.length)
                   }
                   onClick={() =>
                     setNumberOfNotes((n) =>
@@ -217,8 +278,8 @@ function RandomMelody({ setPage }) {
                         settings.allowDuplicate
                           ? 20
                           : settings.customNotes
-                          ? Object.values(customNotes).filter(Boolean).length
-                          : allNotes.length,
+                            ? Object.values(customNotes).filter(Boolean).length
+                            : allNotes.length,
                         n + 1
                       )
                     )
@@ -232,130 +293,224 @@ function RandomMelody({ setPage }) {
                 <Button
                   onClick={play}
                   variant="outlined"
-                  disabled={notes.length === 0 || instrument === null}
+                  disabled={notes.length === 0 || instrument === null || isGenerating}
                   style={{ marginRight: 20 }}
                 >
                   {instrument === null ? "Loading..." : "Play melody"}
                 </Button>
-                <Button onClick={generate} variant="contained">
+                <Button
+                  onClick={clear}
+                  variant="outlined"
+                  color="error"
+                  disabled={isGenerating || (notes.length === 0 && slotStrips.length === 0)}
+                  style={{ marginRight: 20 }}
+                >
+                  Clear
+                </Button>
+                <Button
+                  onClick={generate}
+                  variant="contained"
+                  disabled={isGenerating}
+                >
                   Generate
                 </Button>
               </div>
 
+              {/* Slot Machine Display Area */}
               <div
                 style={{
                   display: "flex",
-                  alignItems: "center",
-                  flexDirection: "column",
-                  width: 720,
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: "15px",
+                  justifyContent: "center",
+                  marginTop: "100px",
+                  width: "100%",
+                  padding: "0 10px",
+                  boxSizing: "border-box"
                 }}
               >
-                {notes.length <= 10 ? (
-                  <ButtonGroup style={{ marginTop: 20 }}>
-                    {notes.map((i, k) => (
-                      <Button
-                        key={k}
-                        style={{ width: 60 }}
-                        onClick={() => playNote(k)}
+                {Array(numberOfNotes)
+                  .fill()
+                  .map((_, index) => {
+                    const strip = slotStrips[index] || ["?"];
+                    const isFinished = notes.length > 0;
+
+
+                    const durationMs = 2000 + index * 500;
+
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          width: "140px",
+                          height: "140px",
+
+
+                          overflow: "hidden",
+                          position: "relative",
+                          background: "white",
+                          cursor: isFinished ? "pointer" : "default",
+                          transition: "background 0.3s ease",
+
+                        }}
+                        onClick={() => {
+                          if (isFinished) playNote(index);
+                        }}
                       >
-                        {i}
-                      </Button>
-                    ))}
-                  </ButtonGroup>
-                ) : (
-                  <>
-                    <ButtonGroup style={{ marginTop: 20 }}>
-                      {notes.slice(0, notes.length / 2).map((i, k) => (
-                        <Button
-                          style={{ width: 60 }}
-                          key={k}
-                          onClick={() => playNote(k)}
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+
+                            transition: isSpinning
+                              ? `transform ${durationMs}ms cubic-bezier(0.15, 0.85, 0.35, 1)`
+                              : "none",
+
+                            transform: isSpinning && strip.length > 1
+                              ? `translateY(-${(strip.length - 1) * 120}px)`
+                              : "translateY(0px)",
+                          }}
                         >
-                          {i}
-                        </Button>
-                      ))}
-                    </ButtonGroup>
-                    <ButtonGroup style={{ marginTop: 2 }}>
-                      {notes.slice(notes.length / 2).map((i, k) => (
-                        <Button
-                          style={{ width: 60 }}
-                          key={k}
-                          onClick={() => playNote(k + notes.length / 2)}
-                        >
-                          {i}
-                        </Button>
-                      ))}
-                    </ButtonGroup>
-                  </>
-                )}
+                          {strip.map((note, noteIndex) => (
+                            <div
+                              key={noteIndex}
+                              style={{
+                                height: "120px",
+                                flexShrink: 0,
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                              }}
+                            >
+                              <Typography
+                                variant="h1"
+                                style={{
+                                  color: "black",
+                                  fontWeight: "bold",
+                                }}
+                              >
+                                {note}
+                              </Typography>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-start",
-              width: "90%",
-              marginTop: 20,
-              border: "1px solid " + theme.palette.primary.main + "40",
-              borderRadius: 4,
-              padding: 20,
-            }}
-          >
-            <FormControl component="fieldset" variant="standard">
-              <FormLabel component="legend">Options</FormLabel>
-              <FormGroup>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={
-                        !(!settings.allowDuplicate || !settings.allowRepeated)
-                      }
-                      onChange={handleChangeSettings}
-                      disabled={!settings.allowDuplicate}
-                      name="allowRepeated"
-                    />
-                  }
-                  label="Allow repeated notes (e.g. C-C-C)"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.allowDuplicate}
-                      onChange={handleChangeSettings}
-                      name="allowDuplicate"
-                    />
-                  }
-                  label="Allow duplicate notes (e.g. C-D-C)"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.customNotes}
-                      onChange={handleChangeSettings}
-                      name="customNotes"
-                    />
-                  }
-                  label="Only use selected notes"
-                />
-              </FormGroup>
-              <ButtonGroup style={{ margin: "10px 0" }}>
-                {allNotes.map((v, k) => (
-                  <Button
-                    onClick={() => {
-                      setCustomNotes((n) => ({ ...n, [v]: !n[v] }));
-                    }}
-                    style={{ width: 64 }}
-                    key={k}
-                    variant={customNotes[v] ? "contained" : "outlined"}
-                    disabled={!settings.customNotes}
-                  >
-                    {v}
-                  </Button>
-                ))}
-              </ButtonGroup>
-            </FormControl>
+          {/* Options Toggle Button */}
+          <div style={{ marginTop: 100, textAlign: 'center' }}>
+            <Button
+              variant="text"
+              color="info"
+              startIcon={<ExpandMoreIcon style={{
+                transform: showOptions ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: '0.3s'
+              }} />}
+              onClick={() => setShowOptions(!showOptions)}
+              disabled={isGenerating}
+            >
+              {showOptions ? "Hide Options" : "Show Options"}
+            </Button>
           </div>
+
+          {/* Collapsible Options Section */}
+          <Collapse in={showOptions} style={{ width: '100%' }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                width: "90%",
+                maxWidth: "1200px",
+                margin: "20px auto",
+                border: "1px solid " + theme.palette.primary.main + "40",
+                borderRadius: 8,
+                padding: "30px",
+                background: "rgba(255, 255, 255, 0.7)",
+                boxShadow: "0px 4px 20px rgba(0,0,0,0.05)"
+              }}
+            >
+              <FormControl component="fieldset" variant="standard" style={{ width: '100%' }}>
+                <FormLabel component="legend" style={{ marginBottom: 10, fontWeight: 'bold' }}>
+                  Generation Settings
+                </FormLabel>
+
+                <FormGroup row style={{ marginBottom: 20 }}> {/* Added 'row' to spread switches out */}
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={!(!settings.allowDuplicate || !settings.allowRepeated)}
+                        onChange={handleChangeSettings}
+                        disabled={!settings.allowDuplicate || isGenerating}
+                        name="allowRepeated"
+                      />
+                    }
+                    label="Allow repeated (C-C-C)"
+                    style={{ marginRight: 30 }}
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={settings.allowDuplicate}
+                        onChange={handleChangeSettings}
+                        disabled={isGenerating}
+                        name="allowDuplicate"
+                      />
+                    }
+                    label="Allow duplicates (C-D-C)"
+                    style={{ marginRight: 30 }}
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={settings.customNotes}
+                        onChange={handleChangeSettings}
+                        disabled={isGenerating}
+                        name="customNotes"
+                      />
+                    }
+                    label="Filter by selected notes"
+                  />
+                </FormGroup>
+
+                <div style={{ marginTop: 10 }}>
+                  <Typography variant="body2" color="textSecondary" gutterBottom>
+                    Select Notes to Include:
+                  </Typography>
+                  <ButtonGroup
+                    variant="outlined"
+                    aria-label="note selection"
+                    fullWidth
+                    style={{
+                      marginTop: 10,
+                      overflowX: 'auto'
+                    }}
+                  >
+                    {allNotes.map((v, k) => (
+                      <Button
+                        onClick={() => {
+                          setCustomNotes((n) => ({ ...n, [v]: !n[v] }));
+                        }}
+                        key={k}
+                        variant={customNotes[v] ? "contained" : "outlined"}
+                        disabled={!settings.customNotes || isGenerating}
+                        style={{
+                          flex: 1,
+                          minWidth: '50px',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {v}
+                      </Button>
+                    ))}
+                  </ButtonGroup>
+                </div>
+              </FormControl>
+            </div>
+          </Collapse>
         </div>
       </Fade>
     </div>
